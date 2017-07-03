@@ -16,6 +16,7 @@
 #include <dmaKit.h>
 
 #include "libpad.h"
+#include "1080p.h"
 
 extern int port, slot;
 extern int pad_init();
@@ -45,6 +46,7 @@ struct SMode modes[] = {
 	// HDTV
 	{ "720p", GS_MODE_DTV_720P,  GS_NONINTERLACED, GS_FRAME, 1280,  720, 1280,  698, 1, -120,  -16},
 	{"1080i", GS_MODE_DTV_1080I, GS_INTERLACED,    GS_FIELD, 1920, 1080, 1920, 1080, 1,  -66, -201},
+	{"1080p", GS_MODE_DTV_1080P, GS_NONINTERLACED, GS_FRAME, 1920, 1080, 1920, 1080, 1,    0,    0},
 };
 int iCurrentMode = 0;
 struct SMode * pCurrentMode = &modes[0];
@@ -185,14 +187,14 @@ get_pad(GSGLOBAL *gsGlobal)
 		// Change mode
 		if(new_pad & PAD_R1) {
 			iCurrentMode++;
-			if (iCurrentMode > 5)
+			if (iCurrentMode > 6)
 				iCurrentMode = 0;
 			iModeChange = 1;
 		}
 		if(new_pad & PAD_L1) {
 			iCurrentMode--;
 			if (iCurrentMode < 0)
-				iCurrentMode = 5;
+				iCurrentMode = 6;
 			iModeChange = 1;
 		}
 	}
@@ -202,6 +204,7 @@ int main(int argc, char *argv[])
 {
 	GSGLOBAL *gsGlobal = gsKit_init_global();
 
+	patch_1080p();
 	pad_init();
 
 	dmaKit_init(D_CTRL_RELE_OFF,D_CTRL_MFD_OFF, D_CTRL_STS_UNSPEC,
@@ -227,6 +230,15 @@ int main(int argc, char *argv[])
 			else
 				gsGlobal->Height = pCurrentMode->Height;
 
+			if (pCurrentMode->Mode == GS_MODE_DTV_1080P) {
+				gsGlobal->DW=1920;
+				gsGlobal->DH=1080;
+				gsGlobal->StartX=300;
+				gsGlobal->StartY=120;
+				//gsGlobal->StartX=300;
+				//gsGlobal->StartY=238;
+			}
+
 			gsKit_vram_clear(gsGlobal);
 			gsKit_init_screen(gsGlobal);
 			gsKit_set_display_offset(gsGlobal, pCurrentMode->XOff * pCurrentMode->VCK, pCurrentMode->YOff);
@@ -239,6 +251,8 @@ int main(int argc, char *argv[])
 		gsKit_sync_flip(gsGlobal);
 		get_pad(gsGlobal);
 	}
+
+	unpatch_1080p();
 
 	return 0;
 }

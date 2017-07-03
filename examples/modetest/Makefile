@@ -12,8 +12,9 @@
 GSKITSRC=../..
 
 EE_BIN  = modetest.elf
-EE_OBJS = modetest.o pad.o
-EE_LIBS = -lpad
+EE_OBJS = modetest.o pad.o 1080p.o
+EE_LIBS = -L$(GSKIT)/lib -L$(PS2SDK)/ee/lib -lgskit -ldmakit -lc -lkernel -lpad
+EE_INCS = -I$(GSKIT)/include
 
 all: $(EE_BIN)
 
@@ -29,4 +30,5 @@ clean:
 install: all
 
 include ../../Makefile.pref
-include ../Makefile.global
+#include ../Makefile.global
+include $(GSKITSRC)/ee/Rules.make
