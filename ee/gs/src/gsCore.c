@@ -182,7 +182,7 @@ int gsKit_add_hsync_handler(int (*hsync_callback)())
 	int callback_id;
 
 	DIntr();
-	callback_id = AddIntcHandler(INTC_GS, hsync_callback, -1);
+	callback_id = AddIntcHandler(INTC_GS, hsync_callback, 0);
 	EnableIntc(INTC_GS);
 	EIntr();
 
