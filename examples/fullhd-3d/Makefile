@@ -12,9 +12,9 @@
 GSKITSRC=../..
 
 EE_BIN  = fullhd-3d.elf
-EE_OBJS = main.o
-EE_LIBS = -L$(GSKITSRC)/lib -L$(PS2SDK)/ee/lib -lsupc++ -lgskit -ldmakit -lc -lkernel -lmath3d -lm -ldraw
-EE_INCS = -I$(GSKITSRC)/ee/gs/include -I$(GSKITSRC)/ee/dma/include
+EE_OBJS = main.o 1080p.o
+EE_LIBS = -L$(GSKIT)/lib -L$(PS2SDK)/ee/lib -lsupc++ -lgskit_toolkit -lgskit -ldmakit -lc -lkernel -lmath3d -lm -ldraw
+EE_INCS = -I$(GSKIT)/include
 
 all: $(EE_BIN)
 
