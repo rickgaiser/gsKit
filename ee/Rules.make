@@ -23,7 +23,7 @@ EE_CXXFLAGS := -D_EE -O2 -G0 -Wall $(EE_CXXFLAGS)
 #endif
 
 # Linker flags
-EE_LDFLAGS := -mno-crt0 $(EE_LDFLAGS)
+# EE_LDFLAGS := -mno-crt0 $(EE_LDFLAGS)
 # EE_LDFLAGS := -nostartfiles $(EE_LDFLAGS)
 
 # Assembler flags
@@ -58,13 +58,13 @@ $(EE_OBJS_DIR):
 	mkdir $(EE_OBJS_DIR)
 
 ifeq ($(use_cpp), true)
-$(EE_BIN) : $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o
+$(EE_BIN) : $(EE_OBJS)
 	$(EE_CXX) -T$(PS2SDK)/ee/startup/linkfile $(EE_LDFLAGS) \
-		-o $(EE_BIN) $(PS2SDK)/ee/startup/crt0.o $(EE_OBJS) $(EE_LIBS)
+		-o $(EE_BIN) $(EE_OBJS) $(EE_LIBS)
 else
-$(EE_BIN) : $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o
+$(EE_BIN) : $(EE_OBJS)
 	$(EE_CC) -T$(PS2SDK)/ee/startup/linkfile $(EE_LDFLAGS) \
-		-o $(EE_BIN) $(PS2SDK)/ee/startup/crt0.o $(EE_OBJS) $(EE_LIBS)
+		-o $(EE_BIN) $(EE_OBJS) $(EE_LIBS)
 endif
 
 $(EE_LIB) : $(EE_OBJS)

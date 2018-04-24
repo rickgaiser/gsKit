@@ -32,7 +32,7 @@ ifdef ZLIB
 	EE_INCS += -I$(ZLIB)/include -I$(LIBPNG)/include
 	EE_CFLAGS += -DHAVE_LIBPNG -DHAVE_ZLIB
 	EE_LIB_DIRS += -L$(ZLIB)/lib -L$(LIBPNG)/lib
-	EE_LIBS += -lz -lpng -lm
+	EE_LIBS += -lzlib -lpng -lm
 endif
 endif
 
