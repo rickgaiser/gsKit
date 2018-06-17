@@ -1,0 +1,9 @@
+image: registry.gitlab.com/ps2max/ps2sdk:latest
+
+stages:
+  - build
+
+build:
+  stage: build
+  script:
+    - make clean all install
