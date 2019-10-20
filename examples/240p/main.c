@@ -19,13 +19,15 @@
 
 
 #define HIRES_MODE
+#define CRT_FILTER
 
-void create_tex_effect(GSTEXTURE *eff, u32 height) {
+#ifdef CRT_FILTER
+void create_tex_effect(GSTEXTURE *eff, u32 height, u32 scaleh) {
 	u32 x,y;
 	u32 *pPixel;
 
 	eff->Width = 64; // Minimum width?
-	eff->Height = height;
+	eff->Height = height * scaleh;
 	eff->PSM = GS_PSM_CT32;
 	eff->Mem = malloc(gsKit_texture_size_ee(eff->Width, eff->Height, eff->PSM));
 	eff->Vram = 0;
@@ -34,36 +36,77 @@ void create_tex_effect(GSTEXTURE *eff, u32 height) {
 	pPixel = eff->Mem;
 
 	for(y=0; y<eff->Height; y++) {
+		u32 lineoff = y % scaleh;
+		u32 linecolor = (lineoff==(scaleh-1)) /* last line ? */ ?
+			GS_SETREG_RGBA(0x00,0x00,0x00,0x40) : // Last line, 0x80=black
+			GS_SETREG_RGBA(0x00,0x00,0x00,0x00);  // Other line(s), 0x00=transparent
 		for(x=0; x<eff->Width; x++) {
-			*pPixel++ = (y&1) ? GS_SETREG_RGBA(0x00,0x00,0x00,0x00) : GS_SETREG_RGBA(0x00,0x00,0x00,0x80);
+			*pPixel++ = linecolor;
 		}
 	}
 }
-
+#endif
 
 int main(int argc, char *argv[])
 {
 	GSGLOBAL *gsGlobal = gsKit_init_global();
 	GSFONTM *gsFontM = gsKit_init_fontm();
 	GSTEXTURE tex;
+#ifdef CRT_FILTER
 	GSTEXTURE tex_effect;
+#endif
 	char tempstr[256];
 	int i=0;
 	int toggle=0;
 	unsigned int iScaleW;
 	unsigned int iScaleH;
+	int iPassCount;
 
 	u64 Black = GS_SETREG_RGBA(0x00,0x00,0x00,0x80);
 	u64 White = GS_SETREG_RGBA(0xFF,0xFF,0xFF,0x80);
 	u64 TexCol = GS_SETREG_RGBA(0x80,0x80,0x80,0x80);
 
+#if 0
+	// Is this 240p60 ???
+	gsGlobal->Mode = GS_MODE_NTSC;
+	gsGlobal->Interlace = GS_NONINTERLACED;
+	gsGlobal->Field = GS_FRAME;
+	gsGlobal->Width = 320;
+	gsGlobal->Height = 240;
+	iPassCount = 1; // NO HIRES!
+	iScaleW = 1;
+	iScaleH = 1;
+#endif
+#if 0
+	gsGlobal->Mode = GS_MODE_DTV_480P;
+	gsGlobal->Interlace = GS_NONINTERLACED;
+	gsGlobal->Field = GS_FRAME;
+	gsGlobal->Width = 640;
+	gsGlobal->Height = 480;
+	iPassCount = 2;
+	iScaleW = 2;
+	iScaleH = 2;
+#endif
+#if 1
+	gsGlobal->Mode = GS_MODE_DTV_720P;
+	gsGlobal->Interlace = GS_NONINTERLACED;
+	gsGlobal->Field = GS_FRAME;
+	gsGlobal->Width = 1280;
+	gsGlobal->Height = 720;
+	iPassCount = 3;
+	iScaleW = 3;
+	iScaleH = 3;
+#endif
+#if 0
 	gsGlobal->Mode = GS_MODE_DTV_1080I;
 	gsGlobal->Interlace = GS_INTERLACED;
 	gsGlobal->Field = GS_FRAME;
 	gsGlobal->Width = 1920;
 	gsGlobal->Height = 540;
+	iPassCount = 3;
 	iScaleW = 4;
 	iScaleH = 2;
+#endif
 
 	gsGlobal->PSM = GS_PSM_CT16;
 	gsGlobal->PSMZ = GS_PSMZ_16S;
@@ -77,7 +120,7 @@ int main(int argc, char *argv[])
 	dmaKit_chan_init(DMA_CHANNEL_GIF);
 
 #ifdef HIRES_MODE
-	gsKit_hires_init_screen(gsGlobal, 3);
+	gsKit_hires_init_screen(gsGlobal, iPassCount);
 #else
 	gsKit_init_screen(gsGlobal);
 #endif
@@ -87,7 +130,9 @@ int main(int argc, char *argv[])
 	// Load textures
 	tex.Delayed = 1;
 	gsKit_texture_png(gsGlobal, &tex, "host:240p_2.png");
-	create_tex_effect(&tex_effect, tex.Height * iScaleH);
+#ifdef CRT_FILTER
+	create_tex_effect(&tex_effect, tex.Height, iScaleH);
+#endif
 
 	gsKit_set_clamp(gsGlobal, GS_CMODE_CLAMP);
 	gsKit_set_test(gsGlobal, GS_ZTEST_OFF);
@@ -135,6 +180,7 @@ int main(int argc, char *argv[])
 			2,
 			TexCol);
 
+#ifdef CRT_FILTER
 		if (toggle) {
 			gsKit_TexManager_bind(gsGlobal, &tex_effect);
 			gsKit_prim_sprite_texture(gsGlobal, &tex_effect,
@@ -149,6 +195,7 @@ int main(int argc, char *argv[])
 				2,
 				TexCol);
 		}
+#endif
 
 		//sprintf(tempstr, "fOffsetXY = %.3f %.3f", fOffsetX, fOffsetY);
 		//gsKit_fontm_print_scaled(gsGlobal, gsFontM, 20, 400, 2, 0.5f, Black, tempstr);
