@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	dmaKit_chan_init(DMA_CHANNEL_GIF);
 
 	gsKit_init_screen(gsGlobal);
-
+	gsKit_TexManager_init(gsGlobal);
 	gsKit_mode_switch(gsGlobal, GS_ONESHOT);
 
 	gsKit_clear(gsGlobal, White);
@@ -59,23 +59,28 @@ int main(int argc, char *argv[])
 
 	gsKit_clear(gsGlobal, White);
 
-	GSPRIMUVPOINT *verts = (GSPRIMUVPOINT*)malloc(sizeof(GSPRIMUVPOINT) * 2);
+	GSPRIMUVPOINT *verts = (GSPRIMUVPOINT*)malloc(sizeof(GSPRIMUVPOINT) * 3);
 	verts[0].xyz2 = vertex_to_XYZ2(gsGlobal, 0, 0, 0);
-    verts[0].rgbaq = color_to_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
-    verts[0].uv = vertex_to_UV(&atlas, 0, 0);
+	verts[0].rgbaq = color_to_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
+	verts[0].uv = vertex_to_UV(&atlas, 0, 0);
 
-	verts[1].xyz2 = vertex_to_XYZ2(gsGlobal, 324, 324, 0);
+	verts[1].xyz2 = vertex_to_XYZ2(gsGlobal, 324, 0, 0);
 	verts[1].rgbaq = color_to_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
-	verts[1].uv = vertex_to_UV(&atlas, atlas.Width, atlas.Height);
+	verts[1].uv = vertex_to_UV(&atlas, atlas.Width, 0);
+
+	verts[2].xyz2 = vertex_to_XYZ2(gsGlobal, 0, 324, 0);
+	verts[2].rgbaq = color_to_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
+	verts[2].uv = vertex_to_UV(&atlas, 0, atlas.Height);
 
 	while(1)
 	{
 		gsKit_clear(gsGlobal, White);
 
-		gskit_prim_list_sprite_texture_uv_3d(gsGlobal, &atlas, 2, verts);
+		gsKit_TexManager_bind(gsGlobal, &atlas);
+
+		gsKit_prim_list_triangle_goraud_texture_uv_3d(gsGlobal, &atlas, 3, verts);
 		// gsKit_prim_sprite_texture(gsGlobal, &atlas, 0, 0, 0, 0, 324, 324, atlas.Width, atlas.Height, 0, TexCol);
 		
-		gsKit_TexManager_bind(gsGlobal, &atlas);
 
 		gsKit_queue_exec(gsGlobal);
 		gsKit_sync_flip(gsGlobal);
