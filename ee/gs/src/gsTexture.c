@@ -727,7 +727,7 @@ void gskit_prim_list_sprite_texture_uv_3d(GSGLOBAL *gsGlobal, const GSTEXTURE *T
 	}
 	*p_data++ = GS_TEX0_1 + gsGlobal->PrimContext;
 
-	*p_data++ = GS_SETREG_PRIM( GS_PRIM_PRIM_TRIANGLE, 1, 1, gsGlobal->PrimFogEnable,
+	*p_data++ = GS_SETREG_PRIM( GS_PRIM_PRIM_SPRITE, 1, 1, gsGlobal->PrimFogEnable,
 				gsGlobal->PrimAlphaEnable, gsGlobal->PrimAAEnable,
 				1, gsGlobal->PrimContext, 0);
 	
