@@ -466,6 +466,27 @@
 		((u64)(GS_XYZ2)		<< 24)	| \
 		((u64)(GIF_NOP)		<< 28);
 
+/// Textured Sprite Goraud Primitive GIFTAG
+#define GIF_TAG_SPRITE_GORAUD_TEXTURED(NLOOP)   \
+		((u64)(NLOOP)		<< 0)	| \
+		((u64)(1)		<< 15)	| \
+		((u64)(0)		<< 46)	| \
+		((u64)(0)		<< 47)	| \
+		((u64)(1)		<< 58)	| \
+		((u64)(9)		<< 60);
+
+/// Textured Sprite Primitive UV REGLIST
+#define GIF_TAG_SPRITE_GORAUD_TEXTURED_UV_REGS(ctx)   \
+		((u64)(GS_TEX0_1 + ctx)	<< 0)	| \
+		((u64)(GS_PRIM)		<< 4)	| \
+		((u64)(GS_RGBAQ)	<< 8)	| \
+		((u64)(GS_UV)		<< 12)	| \
+		((u64)(GS_XYZ2)		<< 16)	| \
+		((u64)(GS_RGBAQ)	<< 20)	| \
+		((u64)(GS_UV)		<< 24)	| \
+		((u64)(GS_XYZ2)		<< 28)	| \
+		((u64)(GIF_NOP)		<< 32);
+
 // Textured Triangle Primitive
 /// Textured Triangle Primitive GIFTAG
 #define GIF_TAG_TRIANGLE_TEXTURED(NLOOP)   \
@@ -521,6 +542,7 @@
 		((u64)(0)		<< 47)	| \
 		((u64)(1)		<< 58)	| \
 		((u64)(12)		<< 60);
+
 /// Textured Triangle Goraud Primitive REGLIST
 #define GIF_TAG_TRIANGLE_GORAUD_TEXTURED_REGS(ctx)   \
 		((u64)(GS_TEX0_1 + ctx)	<< 0)	| \

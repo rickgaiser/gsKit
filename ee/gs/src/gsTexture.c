@@ -709,8 +709,8 @@ void gskit_prim_list_sprite_texture_uv_3d(GSGLOBAL *gsGlobal, const GSTEXTURE *T
 
 	if(p_store == gsGlobal->CurQueue->last_tag)
 	{
-		*p_data++ = GIF_TAG_SPRITE_TEXTURED(count - 1);
-		*p_data++ = GIF_TAG_SPRITE_TEXTURED(gsGlobal->PrimContext);
+		*p_data++ = GIF_TAG_SPRITE_GORAUD_TEXTURED(count - 1);
+		*p_data++ = GIF_TAG_SPRITE_GORAUD_TEXTURED_UV_REGS(gsGlobal->PrimContext);
 	}
 
 	if(Texture->VramClut == 0)
