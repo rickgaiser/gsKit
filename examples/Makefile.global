@@ -53,7 +53,7 @@ test: all
 	ps2client -h $(PS2_IP) -t 1 execee host:$(EE_BIN)
 
 sim: all
-	PCSX2 --elf=$(PWD)/$(EE_BIN) --nogui
+	flatpak --filesystem=host run net.pcsx2.PCSX2 $(PWD)/$(EE_BIN)
 
 reset: clean
 	ps2client -h $(PS2_IP) reset
