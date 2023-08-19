@@ -23,12 +23,7 @@ int main(int argc, char *argv[])
 	GSGLOBAL *gsGlobal;
 	GSTEXTURE atlas;
 
-#ifdef HAVE_LIBJPEG
-    GSTEXTURE Tex3;
-#endif
-
 	u64 White = GS_SETREG_RGBAQ(0xFF,0xFF,0xFF,0x00,0x00);
-	u64 TexCol = GS_SETREG_RGBAQ(0x80,0x80,0x80,0x80,0x00);
 
 	gsGlobal = gsKit_init_global();
 
@@ -47,9 +42,9 @@ int main(int argc, char *argv[])
 	gsKit_TexManager_init(gsGlobal);
 	gsKit_mode_switch(gsGlobal, GS_ONESHOT);
 
-	gsKit_clear(gsGlobal, White);
-
+	atlas.Delayed = 1;
 	gsKit_texture_png(gsGlobal, &atlas, "runner_atlas.png");
+	gsKit_TexManager_bind(gsGlobal, &atlas);
 	printf("Atlas Height: %i\n",atlas.Height);
 	printf("Atlas Width: %i\n",atlas.Width);
 
@@ -57,37 +52,46 @@ int main(int argc, char *argv[])
 
 	gsKit_set_clamp(gsGlobal, GS_CMODE_CLAMP);
 
-	gsKit_clear(gsGlobal, White);
+	struct SPoint {
+		u64 uv;
+		u64 xyz2;
+	};
+	struct SPoint verts[8];
 
-	GSPRIMUVPOINT *verts = (GSPRIMUVPOINT*)malloc(sizeof(GSPRIMUVPOINT) * 3);
-	verts[0].xyz2 = vertex_to_XYZ2(gsGlobal, 0, 0, 0);
-	verts[0].rgbaq = color_to_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
-	verts[0].uv = vertex_to_UV(&atlas, 0, 0);
+	// sprite 1
+	verts[0].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 0), gsKit_float_to_int_v(&atlas, 1));
+	verts[0].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 0), gsKit_float_to_int_y(gsGlobal, 0), 0);
+	verts[1].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 324), gsKit_float_to_int_v(&atlas, 324));
+	verts[1].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 100), gsKit_float_to_int_y(gsGlobal, 100), 0);
 
-	verts[1].xyz2 = vertex_to_XYZ2(gsGlobal, 324, 0, 0);
-	verts[1].rgbaq = color_to_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
-	verts[1].uv = vertex_to_UV(&atlas, atlas.Width, 0);
+	// sprite 2
+	verts[2].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 0), gsKit_float_to_int_v(&atlas, 1));
+	verts[2].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 100), gsKit_float_to_int_y(gsGlobal, 0), 0);
+	verts[3].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 324), gsKit_float_to_int_v(&atlas, 324));
+	verts[3].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 200), gsKit_float_to_int_y(gsGlobal, 100), 0);
 
-	verts[2].xyz2 = vertex_to_XYZ2(gsGlobal, 0, 324, 0);
-	verts[2].rgbaq = color_to_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
-	verts[2].uv = vertex_to_UV(&atlas, 0, atlas.Height);
+	// sprite 3
+	verts[4].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 0), gsKit_float_to_int_v(&atlas, 1));
+	verts[4].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 0), gsKit_float_to_int_y(gsGlobal, 100), 0);
+	verts[5].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 324), gsKit_float_to_int_v(&atlas, 324));
+	verts[5].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 100), gsKit_float_to_int_y(gsGlobal, 200), 0);
+
+	// sprite 4
+	verts[6].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 0), gsKit_float_to_int_v(&atlas, 1));
+	verts[6].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 100), gsKit_float_to_int_y(gsGlobal, 100), 0);
+	verts[7].uv    = GS_SETREG_UV(gsKit_float_to_int_u(&atlas, 324), gsKit_float_to_int_v(&atlas, 324));
+	verts[7].xyz2  = GS_SETREG_XYZ2(gsKit_float_to_int_x(gsGlobal, 200), gsKit_float_to_int_y(gsGlobal, 200), 0);
 
 	while(1)
 	{
 		gsKit_clear(gsGlobal, White);
 
-		gsKit_TexManager_bind(gsGlobal, &atlas);
-
-		gsKit_prim_list_triangle_goraud_texture_uv_3d(gsGlobal, &atlas, 3, verts);
-		// gsKit_prim_sprite_texture(gsGlobal, &atlas, 0, 0, 0, 0, 324, 324, atlas.Width, atlas.Height, 0, TexCol);
-		
+		gskit_prim_list_sprite_texture_uv_3d(gsGlobal, &atlas, 4, verts);
 
 		gsKit_queue_exec(gsGlobal);
 		gsKit_sync_flip(gsGlobal);
 		gsKit_TexManager_nextFrame(gsGlobal);
 	}
-
-	free(verts);
 
 	return 0;
 }

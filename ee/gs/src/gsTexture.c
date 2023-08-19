@@ -689,28 +689,42 @@ void gsKit_prim_sprite_striped_texture_3d(GSGLOBAL *gsGlobal, const GSTEXTURE *T
 }
 #endif
 
-#if F_gskit_prim_list_sprite_texture_uv_3d
-void gskit_prim_list_sprite_texture_uv_3d(GSGLOBAL *gsGlobal, const GSTEXTURE *Texture, int count, const void *vertices)
-{
-	u64* p_data;
-	u64* p_store;
-	int tw, th;
+// Reglist for max 8 points with UV
+#define GIF_TAG_REGLIST_POINTS_UV() \
+		((u64)(GS_UV)		<<  0)	| \
+		((u64)(GS_XYZ2)		<<  4)	| \
+		((u64)(GS_UV)		<<  8)	| \
+		((u64)(GS_XYZ2)		<< 12)	| \
+		((u64)(GS_UV)		<< 16)	| \
+		((u64)(GS_XYZ2)		<< 20)	| \
+		((u64)(GS_UV)		<< 24)	| \
+		((u64)(GS_XYZ2)		<< 28)	| \
+		((u64)(GS_UV)		<< 32)	| \
+		((u64)(GS_XYZ2)		<< 36)	| \
+		((u64)(GS_UV)		<< 40)	| \
+		((u64)(GS_XYZ2)		<< 44)	| \
+		((u64)(GS_UV)		<< 48)	| \
+		((u64)(GS_XYZ2)		<< 52)	| \
+		((u64)(GS_UV)		<< 56)	| \
+		((u64)(GS_XYZ2)		<< 60)
 
-	int qsize = (count*3) + 4;
-	int bytes = count * sizeof(GSPRIMUVPOINT);
+#if F_gskit_prim_list_sprite_texture_uv_3d
+static void gskit_prim_setup_texture(GSGLOBAL *gsGlobal, const GSTEXTURE *Texture)
+{
+	int tw, th;
+	int qsize;
+	u64 *p_data;
 
 	gsKit_set_texfilter(gsGlobal, Texture->Filter);
 	gsKit_set_tw_th(Texture, &tw, &th);
 
-	p_store = p_data = gsKit_heap_alloc(gsGlobal, qsize, (qsize*16), GIF_AD);
-
-	*p_data++ = GIF_TAG_AD(qsize);
-    *p_data++ = GIF_AD;
-
-	if(p_store == gsGlobal->CurQueue->last_tag)
+	// Send TEX0_1
+	qsize = 1; // qsize EXcluding the GIF_TAG, for GIF_AD __ONLY__
+	p_data = gsKit_heap_alloc(gsGlobal, qsize, (qsize * 16), GIF_AD);
+	if(p_data == gsGlobal->CurQueue->last_tag)
 	{
-		*p_data++ = GIF_TAG_SPRITE_GORAUD_TEXTURED(count - 1);
-		*p_data++ = GIF_TAG_SPRITE_GORAUD_TEXTURED_UV_REGS(gsGlobal->PrimContext);
+		*p_data++ = GIF_TAG_AD(qsize);
+		*p_data++ = GIF_AD;
 	}
 
 	if(Texture->VramClut == 0)
@@ -726,14 +740,64 @@ void gskit_prim_list_sprite_texture_uv_3d(GSGLOBAL *gsGlobal, const GSTEXTURE *T
 			Texture->VramClut/256, Texture->ClutPSM, 0, 0, GS_CLUT_STOREMODE_LOAD);
 	}
 	*p_data++ = GS_TEX0_1 + gsGlobal->PrimContext;
+}
 
-	*p_data++ = GS_SETREG_PRIM( GS_PRIM_PRIM_SPRITE, 1, 1, gsGlobal->PrimFogEnable,
+static void gskit_prim_setup_color(GSGLOBAL *gsGlobal, u64 color)
+{
+	int qsize;
+	u64 *p_data;
+
+	// Send RGBAQ
+	qsize = 1; // qsize EXcluding the GIF_TAG, for GIF_AD __ONLY__
+	p_data = gsKit_heap_alloc(gsGlobal, qsize, (qsize * 16), GIF_AD);
+	if(p_data == gsGlobal->CurQueue->last_tag)
+	{
+		*p_data++ = GIF_TAG_AD(qsize);
+		*p_data++ = GIF_AD;
+	}
+
+	*p_data++ = color;
+	*p_data++ = GS_RGBAQ;
+}
+
+static void gskit_prim_setup_prim(GSGLOBAL *gsGlobal, u16 prim)
+{
+	int qsize;
+	u64 *p_data;
+
+	// Send PRIM
+	qsize = 1; // qsize EXcluding the GIF_TAG, for GIF_AD __ONLY__
+	p_data = gsKit_heap_alloc(gsGlobal, qsize, (qsize * 16), GIF_AD);
+	if(p_data == gsGlobal->CurQueue->last_tag)
+	{
+		*p_data++ = GIF_TAG_AD(qsize);
+		*p_data++ = GIF_AD;
+	}
+
+	*p_data++ = prim;
+	*p_data++ = GS_PRIM;
+}
+
+void gskit_prim_list_sprite_texture_uv_3d(GSGLOBAL *gsGlobal, const GSTEXTURE *Texture, int count, const void *vertices)
+{
+	// PRIM, send separately, or embed into giftag
+	u16 prim = GS_SETREG_PRIM( GS_PRIM_PRIM_SPRITE, 0, 1, gsGlobal->PrimFogEnable,
 				gsGlobal->PrimAlphaEnable, gsGlobal->PrimAAEnable,
 				1, gsGlobal->PrimContext, 0);
-	
-	*p_data++ = GS_PRIM;
 
-	memcpy(p_data, vertices, bytes);
+	// Initialization
+	gskit_prim_setup_texture(gsGlobal, Texture);
+	gskit_prim_setup_color(gsGlobal, GS_SETREG_RGBAQ(0x80,0x80,0x80,0x80,0x00));
+	gskit_prim_setup_prim(gsGlobal, prim);
+
+	// Send list of sprite coordinates
+	int qsize = (count*2) + 1; // qsize INcluding the GIF_TAG
+	u64 *p_data = gsKit_heap_alloc(gsGlobal, qsize, (qsize*16), GSKIT_GIF_PRIM_SPRITE_TEXTURED);
+
+	*p_data++ = GIF_TAG(count, 1, 0, 0, GSKIT_GIF_FLG_REGLIST, 4); // count * 4 regs
+	*p_data++ = GIF_TAG_REGLIST_POINTS_UV();
+
+	memcpy(p_data, vertices, count*2*16);
 }
 #endif
 
