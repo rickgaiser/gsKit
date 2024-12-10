@@ -27,5 +27,6 @@
 #include "gsFontM.h"
 #include "gsHires.h"
 #include "gsTexManager.h"
+#include "gsDisplayList.h"
 
 #endif /* __GSKIT_H__ */
