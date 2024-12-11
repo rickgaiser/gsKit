@@ -34,16 +34,23 @@ struct gsDisplayList
 typedef struct gsDisplayList GSDL;
 
 
-GSDL * dlCreate(int qw);
+GSDL * dlCreate(GSGLOBAL *gsGlobal, int qw);
 void dlFree(GSDL *dl);
+
+u32 dlSize(GSDL *dl);
+u32 dlQWSize(GSDL *dl);
+void dlQueue(GSDL *dl);
+void dlReset(GSDL *dl);
 
 void dlBegin(GSDL *dl, enum E_GSDL_PRIM_MODE pm);
 void dlEnd(GSDL *dl);
 
+void dlColorU64(GSDL *dl, u64 color);
 void dlColor4b(GSDL *dl, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void dlColor3f(GSDL *dl, float r, float g, float b);
 
-void dlVertex3x(GSDL *dl, int x, int y, int z);
+void dlVertex3x(GSDL *dl, int x, int y, int z); // fixed point pixels (x16), GS native format
+void dlVertex3i(GSDL *dl, int x, int y, int z);
 void dlVertex3f(GSDL *dl, float x, float y, float z);
 
 

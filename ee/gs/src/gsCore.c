@@ -266,16 +266,31 @@ void gsKit_clear(GSGLOBAL *gsGlobal, u64 color)
 	remain = gsGlobal->Width % 64;
 	pos = 0;
 
+	GSDL *dl = dlCreate(gsGlobal, 128);
+	dlColorU64(dl, color);
+
+	dlBegin(dl, EDL_PM_SPRITE);
 	strips++;
+#if 1
 	while(strips-- > 0)
 	{
-		gsKit_prim_sprite(gsGlobal, pos, 0, pos + 64, gsGlobal->Height, 0, color);
+		dlVertex3i(dl, pos, 0, 0);
+		dlVertex3i(dl, pos + 64, gsGlobal->Height, 0);
 		pos += 64;
 	}
 	if(remain > 0)
 	{
-		gsKit_prim_sprite(gsGlobal, pos, 0, remain + pos, gsGlobal->Height, 0, color);
+		dlVertex3i(dl, pos, 0, 0);
+		dlVertex3i(dl, remain + pos, gsGlobal->Height, 0);
 	}
+#else
+	dlVertex3i(dl, 0, 0, 0);
+	dlVertex3i(dl, gsGlobal->Width, gsGlobal->Height, 0);
+#endif
+	dlEnd(dl);
+
+	dlQueue(dl);
+	dlFree(dl);
 
 	gsGlobal->Test->ZTST = PrevZState;
 	gsKit_set_test(gsGlobal, 0);

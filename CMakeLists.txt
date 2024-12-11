@@ -206,6 +206,7 @@ add_library(gskit STATIC
 	${GS_MISC_OBJS}
 	${GS_TEXT_MANAGER_OBJS}
 	${GS_TEXTURE_OBJS}
+	ee/gs/src/gsDisplayList.c
 )
 
 target_include_directories(gskit PUBLIC ee/gs/include)
