@@ -11,7 +11,9 @@
 
 #include <gsKit.h>
 #include <dmaKit.h>
+#include <kernel.h>
 #include <malloc.h>
+#include <stdio.h>
 
 int main(int argc, char *argv[])
 {
@@ -34,58 +36,22 @@ int main(int argc, char *argv[])
 
 	gsGlobal = gsKit_init_global();
 
-    //  By default the gsKit_init_global() uses an autodetected interlaced field mode
-    //  To set a new mode set these five variables for the resolution desired and
-    //  mode desired
+	// Create 'textures' for the render/display buffers
+	gsTexture_t disp[2];
+	disp[0].Width  = gsGlobal->Width;
+	disp[0].Height = gsGlobal->Height;
+	disp[0].PSM    = gsGlobal->PSM;
+	disp[0].Vram   = gsGlobal->ScreenBuffer[0];
+	disp[1].Width  = gsGlobal->Width;
+	disp[1].Height = gsGlobal->Height;
+	disp[1].PSM    = gsGlobal->PSM;
+	disp[1].Vram   = gsGlobal->ScreenBuffer[1];
+	int renderidx  = 0;
+	int displayidx = 1;
 
-    //  Some examples
-    //  Make sure that gsGlobal->Height is a factor of the mode's gsGlobal->DH
-
-    // gsGlobal->Mode = GS_MODE_NTSC
-    // gsGlobal->Interlace = GS_INTERLACED;
-    // gsGlobal->Field = GS_FIELD;
-    // gsGlobal->Width = 640;
-    // gsGlobal->Height = 448;
-
-    // gsGlobal->Mode = GS_MODE_PAL;
-    // gsGlobal->Interlace = GS_INTERLACED;
-	// gsGlobal->Field = GS_FIELD;
-    // gsGlobal->Width = 640;
-    // gsGlobal->Height = 512;
-
-    // gsGlobal->Mode = GS_MODE_DTV_480P;
-    // gsGlobal->Interlace = GS_NONINTERLACED;
-    // gsGlobal->Field = GS_FRAME;
-    // gsGlobal->Width = 720;
-    // gsGlobal->Height = 480;
-
-    // gsGlobal->Mode = GS_MODE_DTV_1080I;
-    // gsGlobal->Interlace = GS_INTERLACED;
-    // gsGlobal->Field = GS_FIELD;
-    // gsGlobal->Width = 640;
-    // gsGlobal->Height = 540;
-    // gsGlobal->PSM = GS_PSM_CT16;
-    // gsGlobal->PSMZ = GS_PSMZ_16;
-    // gsGlobal->Dithering = GS_SETTING_ON;
-
-    //  A width of 640 would work as well
-    //  However a height of 720 doesn't seem to work well
-    // gsGlobal->Mode = GS_MODE_DTV_720P;
-    // gsGlobal->Interlace = GS_NONINTERLACED;
-    // gsGlobal->Field = GS_FRAME;
-    // gsGlobal->Width = 640;
-    // gsGlobal->Height = 360;
-    // gsGlobal->PSM = GS_PSM_CT16;
-    // gsGlobal->PSMZ = GS_PSMZ_16;
-
-	//  You can use these to turn off Z/Double Buffering. They are on by default.
-	//  gsGlobal->DoubleBuffering = GS_SETTING_OFF;
-	//  gsGlobal->ZBuffering = GS_SETTING_OFF;
-
-	//  This makes things look marginally better in half-buffer mode...
-	//  however on some CRT and all LCD, it makes a really horrible screen shake.
-	//  Uncomment this to disable it. (It is on by default)
-	//  gsGlobal->DoSubOffset = GS_SETTING_OFF;
+	// Create queues
+	gsDisplayList_t *dlp = dlCreate(gsGlobal, 128); // 'persistent'
+	gsDisplayList_t *dl  = dlCreate(gsGlobal, 128); // 'oneshot'
 
 	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 
@@ -200,8 +166,12 @@ int main(int argc, char *argv[])
 
 	gsKit_prim_sprite(gsGlobal, 400.0f, 100.0f, 500.0f, 200.0f, 5, Red);
 
-	gsKit_mode_switch(gsGlobal, GS_ONESHOT);
+	gsKit_queue_exec(gsGlobal);
 
+	u128 dmatag[2] __attribute__ ((aligned(16)));
+	dmatag[0] = DMA_TAG(gsGlobal->Per_Queue->tag_size, 0, DMA_REF, 0, (u32)(gsGlobal->Per_Queue->dma_tag) + 16 & 0x0fffffff, 0);
+
+	int count = 0;
 	while(1)
 	{
 		if( y <= 10  && (x + width) < (gsGlobal->Width - 10))
@@ -213,19 +183,51 @@ int main(int argc, char *argv[])
 		else if( y > 10 && x <= 10 )
 			y-=10;
 
-		gsKit_prim_sprite(gsGlobal, x, y, x + width, y + height, 4, BlueTrans);
+		dlBegin(dl, EDL_GM_SPRITE);
+			dlColorU64(dl, BlueTrans);
+			dlVertex3i(dl, x, y, 4);
+			dlVertex3i(dl, x + width, y + height, 4);
 
-		// RedTrans must be a oneshot for proper blending!
-		gsKit_prim_sprite(gsGlobal, 100.0f, 100.0f, 200.0f, 200.0f, 5, RedTrans);
-		gsKit_prim_sprite(gsGlobal, 100.0f, 200.0f, 250.0f, 250.0f, 5, GreenTrans);
-		gsKit_prim_sprite(gsGlobal, 200.0f, 250.0f, 275.0f, 275.0f, 5, WhiteTrans);
+			dlColorU64(dl, RedTrans);
+			dlVertex3i(dl, 100, 100, 5);
+			dlVertex3i(dl, 200, 200, 5);
 
-		gsKit_queue_exec(gsGlobal);
+			dlColorU64(dl, GreenTrans);
+			dlVertex3i(dl, 100, 200, 5);
+			dlVertex3i(dl, 250, 250, 5);
 
-		// Flip before exec to take advantage of DMA execution double buffering.
-		gsKit_sync_flip(gsGlobal);
+			dlColorU64(dl, WhiteTrans);
+			dlVertex3i(dl, 200, 250, 5);
+			dlVertex3i(dl, 275, 275, 5);
+		dlEnd(dl);
 
+		dlBegin(dl, EDL_GM_AD);
+			// Next frame, render to the current display buffer
+			dlADSetDrawEnv1(dl, &disp[displayidx]);
+			dlADSetDrawEnv2(dl, &disp[displayidx]);
+		dlEnd(dl);
+
+		dmatag[1] = DMA_TAG(dlQWSize(dl), 0, DMA_REFE, 0, (u32)dl->data & 0x0fffffff, 0);
+		SyncDCache(&dmatag[0], &dmatag[2]);
+		dmaKit_wait_fast();
+		dmaKit_send_chain_ucab(DMA_CHANNEL_GIF, &dmatag[0]);
+
+		gsKit_vsync_wait();
+		gsSetDisplay(&disp[renderidx]);
+
+		// Swap
+		displayidx = displayidx == 0 ? 1 : 0;
+		renderidx  = renderidx  == 0 ? 1 : 0;
+
+		dlReset(dl);
+
+		count++;
+		if (count >= 3000) {
+			printf("3000\n");
+			count = 0;
+		}
 	}
+	dlFree(dl);
 
 	return 0;
 }

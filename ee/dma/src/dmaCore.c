@@ -98,7 +98,7 @@ void dmaKit_send_ucab(u16 channel, void *data, u32 size)
 
         if(DMA_QWC[channel])
                 *(volatile u32 *)DMA_QWC[channel] = size;
-        *(volatile u32 *)DMA_MADR[channel] = DMA_SET_MADR((u32)data - 0x30000000, 0);
+        *(volatile u32 *)DMA_MADR[channel] = DMA_SET_MADR((u32)data & 0x0fffffff, 0);
         *(volatile u32 *)DMA_CHCR[channel] = DMA_SET_CHCR(1,    // Direction
                                                           0,    // ChainMode
                                                           0,    // Address Stack Pointer
@@ -184,7 +184,7 @@ void dmaKit_send_chain_ucab(u16 channel, void *data)
         if(DMA_QWC[channel])
                 *(volatile u32 *)DMA_QWC[channel] = 0;
 
-        *(volatile u32 *)DMA_TADR[channel] = DMA_SET_TADR((u32)data - 0x30000000, 0);
+        *(volatile u32 *)DMA_TADR[channel] = DMA_SET_TADR((u32)data & 0x0fffffff, 0);
         *(volatile u32 *)DMA_CHCR[channel] = DMA_SET_CHCR(1,    // Direction
                                                           1,    // ChainMode
                                                           0,    // Address Stack Pointer
@@ -256,4 +256,3 @@ void dmaKit_get_spr(u16 channel, void *data, void *dest, u32 size)
         return;
 }
 #endif
-

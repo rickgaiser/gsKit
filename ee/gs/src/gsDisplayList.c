@@ -5,26 +5,21 @@
 
 
 //---------------------------------------------------------------------------
-GSDL * dlCreate(GSGLOBAL *gsGlobal, int qw)
+gsDisplayList_t * dlCreate(GSGLOBAL *gsGlobal, int qw)
 {
     printf("%s\n", __FUNCTION__);
 
-    GSDL *dl = calloc(1, sizeof(GSDL));
+    gsDisplayList_t *dl = calloc(1, sizeof(gsDisplayList_t));
     dl->gsGlobal = gsGlobal;
     dl->data = gsKit_alloc_ucab(qw * 16);
-    dl->p_data = dl->data;
     dl->qw = qw;
-    dl->eCM = EDL_CM_PRIM;
-    dl->ePM = EDL_PM_NONE;
-    dl->current_rgbaq = GS_SETREG_RGBAQ(0, 0, 0, 0, 0);
-    dl->prim_count = 0;
-    dl->vert_count = 0;
+    dlReset(dl);
 
     return dl;
 }
 
 //---------------------------------------------------------------------------
-void dlFree(GSDL *dl)
+void dlFree(gsDisplayList_t *dl)
 {
     printf("%s\n", __FUNCTION__);
 
@@ -33,7 +28,7 @@ void dlFree(GSDL *dl)
 }
 
 //---------------------------------------------------------------------------
-u32 dlSize(GSDL *dl)
+u32 dlSize(gsDisplayList_t *dl)
 {
     //printf("%s\n", __FUNCTION__);
 
@@ -41,7 +36,7 @@ u32 dlSize(GSDL *dl)
 }
 
 //---------------------------------------------------------------------------
-u32 dlQWSize(GSDL *dl)
+u32 dlQWSize(gsDisplayList_t *dl)
 {
     //printf("%s\n", __FUNCTION__);
 
@@ -49,31 +44,29 @@ u32 dlQWSize(GSDL *dl)
 }
 
 //---------------------------------------------------------------------------
-void dlQueue(GSDL *dl)
-{
-    printf("%s: size = %db / %dqw\n", __FUNCTION__, dlSize(dl), dlQWSize(dl));
-
-	u64* p_data = gsKit_heap_alloc(dl->gsGlobal, dlQWSize(dl), dlSize(dl), GSKIT_GIF_PRIM_SPRITE);
-    memcpy(p_data, dl->data, dlSize(dl));
-}
-
-//---------------------------------------------------------------------------
-void dlReset(GSDL *dl)
+void dlReset(gsDisplayList_t *dl)
 {
     //printf("%s\n", __FUNCTION__);
+
+    dl->p_data = dl->data;
+    dl->eCM = EDL_CM_PRIM;
+    dl->eGM = EDL_GM_NONE;
+    dl->current_rgbaq = GS_SETREG_RGBAQ(0, 0, 0, 0, 0);
+    dl->prim_count = 0;
+    dl->vert_count = 0;
 }
 
 //---------------------------------------------------------------------------
-void dlBegin(GSDL *dl, enum E_GSDL_PRIM_MODE pm)
+void dlBegin(gsDisplayList_t *dl, enum E_GSDL_GIF_MODE pm)
 {
-    printf("%s\n", __FUNCTION__);
+    //printf("%s\n", __FUNCTION__);
 
-    if (dl->ePM != EDL_PM_NONE) {
+    if (dl->eGM != EDL_GM_NONE) {
         printf("%s: ERROR\n", __FUNCTION__);
         return;
     }
 
-    dl->ePM = pm;
+    dl->eGM = pm;
     dl->prim_count = 0;
     dl->vert_count = 0;
 
@@ -81,19 +74,19 @@ void dlBegin(GSDL *dl, enum E_GSDL_PRIM_MODE pm)
     dl->p_giftag = dl->p_data;
     dl->p_data += 2;
 
-    switch (dl->ePM) {
-        case EDL_PM_SPRITE:   dl->vpp = 2; break;
-        case EDL_PM_TRIANGLE: dl->vpp = 3; break;
-        case EDL_PM_QUAD:     dl->vpp = 4; break;
+    switch (dl->eGM) {
+        case EDL_GM_SPRITE:   dl->vpp = 2; break;
+        case EDL_GM_TRIANGLE: dl->vpp = 3; break;
+        case EDL_GM_QUAD:     dl->vpp = 4; break;
     }
 }
 
 //---------------------------------------------------------------------------
-void dlEnd(GSDL *dl)
+void dlEnd(gsDisplayList_t *dl)
 {
-    printf("%s: %d primitives\n", __FUNCTION__, dl->prim_count);
+    //printf("%s: %d primitives\n", __FUNCTION__, dl->prim_count);
 
-    if (dl->ePM == EDL_PM_NONE) {
+    if (dl->eGM == EDL_GM_NONE) {
         printf("%s: ERROR 1\n", __FUNCTION__);
         return;
     }
@@ -109,8 +102,8 @@ void dlEnd(GSDL *dl)
     }
 
     // Complete the giftag
-    switch (dl->ePM) {
-        case EDL_PM_SPRITE:
+    switch (dl->eGM) {
+        case EDL_GM_SPRITE:
             dl->p_giftag[0] = GIF_TAG(
                 dl->prim_count,
                 1, // End of Packet ?
@@ -132,7 +125,7 @@ void dlEnd(GSDL *dl)
                 ((u64)(GS_XYZ2)  << 4) | \
                 ((u64)(GS_XYZ2)  << 8);
             break;
-        case EDL_PM_TRIANGLE:
+        case EDL_GM_TRIANGLE:
             dl->p_giftag[0] = GIF_TAG(
                 dl->prim_count,
                 1, // End of Packet ?
@@ -155,7 +148,7 @@ void dlEnd(GSDL *dl)
                 ((u64)(GS_XYZ2)  <<  8) | \
                 ((u64)(GS_XYZ2)  << 12);
             break;
-        case EDL_PM_QUAD:
+        case EDL_GM_QUAD:
             dl->p_giftag[0] = GIF_TAG(
                 dl->prim_count,
                 1, // End of Packet ?
@@ -179,17 +172,21 @@ void dlEnd(GSDL *dl)
                 ((u64)(GS_XYZ2)  << 12) | \
                 ((u64)(GS_XYZ2)  << 16);
             break;
+        case EDL_GM_AD:
+            dl->p_giftag[0] = GIF_TAG_AD(dl->prim_count);
+            dl->p_giftag[1] = GIF_AD;
+            dl->prim_count = 0;
     }
 
     // Align to QW
     if (dlSize(dl) & 15)
         *dl->p_data++ = 0;
 
-    dl->ePM = EDL_PM_NONE;
+    dl->eGM = EDL_GM_NONE;
 }
 
 //---------------------------------------------------------------------------
-void dlColorU64(GSDL *dl, u64 color)
+void dlColorU64(gsDisplayList_t *dl, u64 color)
 {
     //printf("%s\n", __FUNCTION__);
 
@@ -198,7 +195,7 @@ void dlColorU64(GSDL *dl, u64 color)
 }
 
 //---------------------------------------------------------------------------
-void dlColor4b(GSDL *dl, unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+void dlColor4b(gsDisplayList_t *dl, unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
     //printf("%s\n", __FUNCTION__);
 
@@ -206,7 +203,7 @@ void dlColor4b(GSDL *dl, unsigned char r, unsigned char g, unsigned char b, unsi
 }
 
 //---------------------------------------------------------------------------
-void dlColor3f(GSDL *dl, float r, float g, float b)
+void dlColor3f(gsDisplayList_t *dl, float r, float g, float b)
 {
     //printf("%s\n", __FUNCTION__);
 
@@ -214,11 +211,11 @@ void dlColor3f(GSDL *dl, float r, float g, float b)
 }
 
 //---------------------------------------------------------------------------
-void dlVertex3x(GSDL *dl, int x, int y, int z)
+void dlVertex3x(gsDisplayList_t *dl, int x, int y, int z)
 {
     //printf("%s\n", __FUNCTION__);
 
-    if (dl->ePM == EDL_PM_NONE) {
+    if (dl->eGM == EDL_GM_NONE) {
         printf("%s: ERROR\n", __FUNCTION__);
         return;
     }
@@ -240,7 +237,7 @@ void dlVertex3x(GSDL *dl, int x, int y, int z)
 }
 
 //---------------------------------------------------------------------------
-void dlVertex3i(GSDL *dl, int x, int y, int z)
+void dlVertex3i(gsDisplayList_t *dl, int x, int y, int z)
 {
     //printf("%s\n", __FUNCTION__);
 
@@ -248,9 +245,42 @@ void dlVertex3i(GSDL *dl, int x, int y, int z)
 }
 
 //---------------------------------------------------------------------------
-void dlVertex3f(GSDL *dl, float x, float y, float z)
+void dlVertex3f(gsDisplayList_t *dl, float x, float y, float z)
 {
     //printf("%s\n", __FUNCTION__);
 
     dlVertex3x(dl, x*16, y*16, z*16);
+}
+
+//---------------------------------------------------------------------------
+void dlAD(gsDisplayList_t *dl, u64 a, u64 d)
+{
+    if (dl->eGM != EDL_GM_AD) {
+        printf("%s: ERROR\n", __FUNCTION__);
+        return;
+    }
+
+	*dl->p_data++ = d;
+	*dl->p_data++ = a;
+    dl->prim_count++;
+}
+
+//---------------------------------------------------------------------------
+void dlADSetDrawEnv1(gsDisplayList_t *dl, gsTexture_t *t)
+{
+    dlAD(dl, GS_SCISSOR_1, GS_SETREG_SCISSOR_1(0, t->Width - 1, 0, t->Height - 1));
+    dlAD(dl, GS_FRAME_1,   GS_SETREG_FRAME_1(t->Vram / 8192, t->Width / 64, t->PSM, 0));
+}
+
+//---------------------------------------------------------------------------
+void dlADSetDrawEnv2(gsDisplayList_t *dl, gsTexture_t *t)
+{
+    dlAD(dl, GS_SCISSOR_2, GS_SETREG_SCISSOR_1(0, t->Width - 1, 0, t->Height - 1));
+    dlAD(dl, GS_FRAME_2,   GS_SETREG_FRAME_1(t->Vram / 8192, t->Width / 64, t->PSM, 0));
+}
+
+//---------------------------------------------------------------------------
+void gsSetDisplay(gsTexture_t *t)
+{
+    GS_SET_DISPFB2(t->Vram / 8192, t->Width / 64, t->PSM, 0, 0);
 }
